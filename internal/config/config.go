@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/user"
 )
 
 type Config struct {
@@ -16,7 +15,7 @@ const (
 	configFileName = ".gatorconfig.json"
 )
 
-func Read() Config {
+func Read() (Config, error) {
 	configPath, err := getConfigFilePath()
 	if err != nil {
 		fmt.Printf("error retrieving home directory: %v", err)
@@ -24,18 +23,16 @@ func Read() Config {
 
 	file, err := os.Open(configPath)
 	if err != nil {
-		fmt.Printf("error opening file: %v\n", err)
-		return Config{}
+		return Config{}, err
 	}
 
 	var config Config
 	decoder := json.NewDecoder(file)
 	if err = decoder.Decode(&config); err != nil {
-		fmt.Printf("error decoding json file: %v\n", err)
-		return Config{}
+		return Config{}, err
 	}
 
-	return config
+	return config, nil
 }
 
 func getConfigFilePath() (string, error) {
@@ -49,15 +46,14 @@ func getConfigFilePath() (string, error) {
 	return configPath, nil
 }
 
-func (c *Config) SetUser() error {
-	currentUser, err := user.Current()
+func (c *Config) SetUser(username string) error {
+
+	c.CurrentUserName = username
+
+	err := write(c)
 	if err != nil {
-		return fmt.Errorf("error getting user name: %v", err)
+		return err
 	}
-
-	c.CurrentUserName = currentUser.Username
-
-	err = write(c)
 
 	return nil
 }
