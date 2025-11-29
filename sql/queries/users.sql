@@ -9,7 +9,7 @@ values (
 returning *;
 
 -- name: GetUser :one
-select name from users where name = $1;
+select * from users where name = $1;
 
 -- name: GetUserId :one
 select id from users where name = $1;

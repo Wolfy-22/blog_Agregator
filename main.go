@@ -3,6 +3,7 @@ package main
 import (
 	"blog_Agregator/internal/config"
 	"blog_Agregator/internal/database"
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -21,6 +22,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("error reading config: %v", err)
 	}
+
 	poinconf := &conf
 
 	db, err := sql.Open("postgres", conf.Db_url)
@@ -45,9 +47,9 @@ func main() {
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerUsers)
 	cmds.register("agg", handlerAgg)
-	cmds.register("addfeed", handlerAddFeed)
+	cmds.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	cmds.register("feeds", handlerFeeds)
-	cmds.register("follow", handlerFollow)
+	cmds.register("follow", middlewareLoggedIn(handlerFollow))
 	cmds.register("following", handlerFollowing)
 
 	if len(os.Args) < 2 {
@@ -64,4 +66,15 @@ func main() {
 		os.Exit(1)
 	}
 
+}
+
+func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) func(*state, command) error {
+	return func(s *state, cmd command) error {
+		user, err := s.db.GetUser(context.Background(), s.cfg.CurrentUserName)
+		if err != nil {
+			return err
+		}
+
+		return handler(s, cmd, user)
+	}
 }

@@ -19,3 +19,6 @@ from feeds;
 
 -- name: GetFeedByURL :one
 select * from feeds where url = $1;
+
+-- name: UnfollowFeed :one
+delete * from feeds where url = $1;

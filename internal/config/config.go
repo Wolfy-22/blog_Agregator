@@ -50,7 +50,7 @@ func (c *Config) SetUser(username string) error {
 
 	c.CurrentUserName = username
 
-	err := write(c)
+	err := Write(c)
 	if err != nil {
 		return err
 	}
@@ -58,7 +58,7 @@ func (c *Config) SetUser(username string) error {
 	return nil
 }
 
-func write(cfg *Config) error {
+func Write(cfg *Config) error {
 
 	jsonData, err := json.Marshal(cfg)
 	if err != nil {
