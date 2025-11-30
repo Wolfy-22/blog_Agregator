@@ -21,4 +21,4 @@ delete from users;
 select name from users;
 
 -- name: GetUserById :one
-select name from users where id = $1;
+select * from users where id = $1;

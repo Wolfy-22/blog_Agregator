@@ -11,38 +11,55 @@ import (
 
 func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 2 {
-		return fmt.Errorf("add feed reuquires a name and a url")
+		return fmt.Errorf("usage: %s <name> <url>", cmd.Name)
 	}
 
-	currentUserId, err := s.db.GetUserId(context.Background(), s.cfg.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("error getting user data: %w", err)
-	}
+	name := cmd.Args[0]
+	url := cmd.Args[1]
 
 	feed, err := s.db.CreateFeed(context.Background(), database.CreateFeedParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
-		Name:      cmd.Args[0],
-		Url:       cmd.Args[1],
-		UserID:    currentUserId,
+		UserID:    user.ID,
+		Name:      name,
+		Url:       url,
 	})
 	if err != nil {
-		return fmt.Errorf("error creating feed: %w", err)
+		return fmt.Errorf("couldn't create feed: %w", err)
 	}
 
-	followFeed, err := s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
+	feedFollow, err := s.db.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
-		UserID:    currentUserId,
+		UserID:    user.ID,
 		FeedID:    feed.ID,
 	})
 	if err != nil {
-		return fmt.Errorf("error creating Feed Follow: %w", err)
+		return fmt.Errorf("couldn't create feed follow: %w", err)
 	}
 
-	fmt.Printf("%v\n", feed)
-	fmt.Printf("%v\n", followFeed)
+	fmt.Println("Feed created successfully:")
+	printFeed(feed, user)
+	fmt.Println()
+	fmt.Println("Feed followed successfully:")
+	printFeedFollow(feedFollow.UserName, feedFollow.FeedName)
+	fmt.Println("=====================================")
 	return nil
+}
+
+func printFeed(feed database.Feed, user database.User) {
+	fmt.Printf("* ID:            %s\n", feed.ID)
+	fmt.Printf("* Created:       %v\n", feed.CreatedAt)
+	fmt.Printf("* Updated:       %v\n", feed.UpdatedAt)
+	fmt.Printf("* Name:          %s\n", feed.Name)
+	fmt.Printf("* URL:           %s\n", feed.Url)
+	fmt.Printf("* User:          %s\n", user.Name)
+	fmt.Printf("* LastFetchedAt: %v\n", feed.LastFetchedAt.Time)
+}
+
+func printFeedFollow(username, feedname string) {
+	fmt.Printf("* User:          %s\n", username)
+	fmt.Printf("* Feed:          %s\n", feedname)
 }

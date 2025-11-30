@@ -5,7 +5,6 @@ import (
 	"blog_Agregator/internal/database"
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
 	"os"
 
@@ -13,59 +12,55 @@ import (
 )
 
 type state struct {
-	cfg *config.Config
 	db  *database.Queries
+	cfg *config.Config
 }
 
 func main() {
-	conf, err := config.Read()
+	cfg, err := config.Read()
 	if err != nil {
 		log.Fatalf("error reading config: %v", err)
 	}
 
-	poinconf := &conf
-
-	db, err := sql.Open("postgres", conf.Db_url)
+	db, err := sql.Open("postgres", cfg.Db_url)
 	if err != nil {
-		fmt.Printf("%v", err)
-		os.Exit(1)
+		log.Fatalf("error connecting to db: %v", err)
 	}
-
+	defer db.Close()
 	dbQueries := database.New(db)
 
-	s := &state{
+	programState := &state{
 		db:  dbQueries,
-		cfg: poinconf,
+		cfg: &cfg,
 	}
 
 	cmds := commands{
 		registeredCommands: make(map[string]func(*state, command) error),
 	}
 
-	cmds.register("login", handlerLogin)
 	cmds.register("register", handlerRegister)
+	cmds.register("login", handlerLogin)
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerUsers)
 	cmds.register("agg", handlerAgg)
 	cmds.register("addfeed", middlewareLoggedIn(handlerAddFeed))
 	cmds.register("feeds", handlerFeeds)
 	cmds.register("follow", middlewareLoggedIn(handlerFollow))
-	cmds.register("following", handlerFollowing)
+	cmds.register("following", middlewareLoggedIn(handlerFollowing))
+	cmds.register("unfollow", middlewareLoggedIn(handlerUnfollow))
+	cmds.register("browse", middlewareLoggedIn(handlerBrowse))
 
 	if len(os.Args) < 2 {
-		fmt.Println("error: Not enough arguments given")
-		os.Exit(1)
+		log.Fatal("Usage: cli <command> [args...]")
 	}
 
 	cmdName := os.Args[1]
 	cmdArgs := os.Args[2:]
 
-	err = cmds.run(s, command{Name: cmdName, Args: cmdArgs})
+	err = cmds.run(programState, command{Name: cmdName, Args: cmdArgs})
 	if err != nil {
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
-
 }
 
 func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) func(*state, command) error {
